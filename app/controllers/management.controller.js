@@ -1,5 +1,6 @@
 const db = require('../models');
 const Op = db.Sequelize.Op;
+const sequelize = db.sequelize;
 
 const Management = db.management;
 const Project = db.project;
@@ -63,23 +64,59 @@ exports.create = (req, res) => {
 exports.findAll = (req, res) => {
   const {date, userId, toolId, projectId} = req.params;
 
-  Management.findAll({
-    where :{
-      [Op.and]: [ {date}, {userId}, {toolId}, {projectId} ]
-    },
-    include: [
-      { model: Tool, attributes: ['name'] },
-      { model: User, attributes: ['name'] },
-      { model: Project, attributes: ['name'] }
-    ]
-  })
-    .then(data => {
+  // Management.findAll({
+  //   where :{
+  //     [Op.and]: [ {date}, {userId}, {toolId}, {projectId} ]
+  //   },
+  //   include: [
+  //     { model: Tool, attributes: ['name'] },
+  //     { model: User, attributes: ['name'] },
+  //     { model: Project, attributes: ['name'] }
+  //   ]
+  // })
+  //   .then(data => {
+  //     return res.status(200).send(data);
+  //   })
+  //   .catch(err => {
+  //     res.status(500).send({
+  //       message:
+  //         err.message || 'Some error occurred while retrieving the operation'
+  //     });
+  //   });
+
+  sequelize.query(
+    `SELECT
+      m.*,
+      p."name" as "projectName",
+      t."name" as "toolName",
+      u."name" as "userName",
+      SUM(o."productionResult") as productionResult
+    FROM
+      management m, projects p, tools t, users u, operations o
+    WHERE
+      m."date" = :date AND
+      m."userId" = :userId AND
+      m."toolId" = :toolId AND
+      m."projectId" = :projectId AND
+      u.id = m."userId" AND
+      t.id = m."toolId" AND
+      p.id = m."projectId" AND
+      o."userId" = m."userId" AND
+      o."toolId" = m."toolId" AND
+      o."projectId" = m."projectId" AND
+      o.date = m."date"
+    GROUP BY
+      m.date, m."isCleaned", m."cleanlinessNote", m."isReady", m."readyNote", m.location, m.job, m."returnTime", m.fee, m."initialHm", m."finalHm", m."userId", m."toolId", m."projectId", p.name, t.name, u.name`,
+    {replacements: {date, userId, toolId, projectId}}
+  )
+    .then(result => {
+      const data = result[0];
       return res.status(200).send(data);
     })
     .catch(err => {
       res.status(500).send({
         message:
-          err.message || 'Some error occurred while retrieving the operation'
+          err.message || 'Some error occurred while creating the cost'
       });
     });
 }

@@ -20,7 +20,7 @@ app.use((req, res, next) => {
   next();
 });
 
-db.sequelize.sync({force: true});
+// db.sequelize.sync({force: true});
 
 app.use('/sima/v1', require('./routes/v1'));
 
