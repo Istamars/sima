@@ -45,6 +45,7 @@ const changeOperationFormat = (array) => {
 }
 
 const countDuration = (startTime, endTime) => {
+  if (!endTime) return '0 hour';
   const start = startTime.split(':');
   const end = endTime.split(':');
   const duration = ((parseInt(end[0]) * 60) + parseInt(end[1])) - ((parseInt(start[0]) * 60) + parseInt(start[1]));
