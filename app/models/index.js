@@ -28,6 +28,7 @@ db.management = require('./management.model')(sequelize, Sequelize);
 db.cost = require('./cost.model')(sequelize, Sequelize);
 db.usage = require('./usage.model')(sequelize, Sequelize);
 db.report = require('./report.model')(sequelize, Sequelize);
+db.maintenance = require('./maintenance.model')(sequelize, Sequelize);
 
 // Define association here
 db.user.hasMany(db.cost, {as: 'costs'});
@@ -67,6 +68,11 @@ db.report.belongsTo(db.user, { foreignKey: 'isSiteManagerApproved' });
 db.report.belongsTo(db.user, { foreignKey: 'isProjectManagerApproved' });
 db.report.belongsTo(db.tool, { foreignKey: 'toolId' });
 db.report.belongsTo(db.project, { foreignKey: 'projectId' });
+
+db.tool.hasMany(db.maintenance, {as: 'maintenances'});
+db.project.hasMany(db.maintenance, {as: 'maintenances'});
+db.maintenance.belongsTo(db.tool, { foreignKey: 'toolId' });
+db.maintenance.belongsTo(db.project, { foreignKey: 'projectId' });
 
 // db.user.belongsToMany(db.report, {
 //   through: 'approval',
