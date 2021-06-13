@@ -23,6 +23,7 @@ db.user = require('./user.model')(sequelize, Sequelize);
 db.tool = require('./tool.model')(sequelize, Sequelize);
 db.project = require('./project.model')(sequelize, Sequelize);
 db.operational = require('./operational.model')(sequelize, Sequelize);
+db.mechanic = require('./mechanic.model')(sequelize, Sequelize);
 db.operation = require('./operation.model')(sequelize, Sequelize);
 db.management = require('./management.model')(sequelize, Sequelize);
 db.cost = require('./cost.model')(sequelize, Sequelize);
@@ -71,8 +72,10 @@ db.report.belongsTo(db.project, { foreignKey: 'projectId' });
 
 db.tool.hasMany(db.maintenance, {as: 'maintenances'});
 db.project.hasMany(db.maintenance, {as: 'maintenances'});
+db.mechanic.hasMany(db.maintenance, {as: 'maintenances'});
 db.maintenance.belongsTo(db.tool, { foreignKey: 'toolId' });
 db.maintenance.belongsTo(db.project, { foreignKey: 'projectId' });
+db.maintenance.belongsTo(db.mechanic, { foreignKey: 'mechanicId' });
 
 // db.user.belongsToMany(db.report, {
 //   through: 'approval',

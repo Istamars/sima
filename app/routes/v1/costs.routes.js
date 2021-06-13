@@ -10,6 +10,10 @@ router.get(
   cost.findTotalCostByOperational
 );
 router.get(
+  '/projects/:projectId/tools/:toolId/date/:date',
+  cost.findByProjectToolDate
+);
+router.get(
   '/projects/:projectId/tools/:toolId',
   cost.findAllByProject
 );

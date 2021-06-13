@@ -96,6 +96,32 @@ exports.findTotalCostByOperational = (req, res) => {
     });
 }
 
+exports.findByProjectToolDate = (req, res) => {
+    const {projectId, toolId, date} = req.params
+
+    sequelize.query(
+      `SELECT
+        o.description, c.quantity, c."unitCost", c.quantity * c."unitCost" as "total"
+      FROM
+        costs c, operationals o
+      WHERE
+        c."projectId" = :projectId AND
+        c."toolId" = :toolId AND
+        c."date" = :date AND
+        c."operationalId" = o.id`,
+      {replacements: {date, toolId, projectId}}
+    )
+      .then(result => {
+        const data = result[0];
+        return res.status(200).send(data);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message:
+            err.message || 'Some error occurred while creating the cost'
+        });
+      });
+}
 
 exports.findAllByProject = (req, res) => {
   const {toolId, projectId} = req.params;

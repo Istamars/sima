@@ -4,6 +4,7 @@ router.use('/auth', require('./authentication.routes'));
 router.use('/tools', require('./tools.routes'));
 router.use('/projects', require('./projects.routes'));
 router.use('/operationals', require('./opeartionals.routes'));
+router.use('/mechanics', require('./mechanic.routes'));
 router.use('/reports', require('./reports.routes'));
 router.use('/operations', require('./operations.routes'));
 router.use('/managements', require('./managements.routes'));

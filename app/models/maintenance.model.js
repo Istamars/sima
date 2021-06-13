@@ -9,14 +9,21 @@ module.exports = (sequelize, Sequelize) => {
       type: {
         type: Sequelize.STRING,
       },
-      mechanic: {
-        type: Sequelize.INTEGER,
+      description: {
+        type: Sequelize.STRING,
       },
       quantity: {
         type: Sequelize.INTEGER
       },
       unitPrice: {
         type: Sequelize.INTEGER,
+      },
+      mechanicId: {
+        type: Sequelize.STRING,
+        references: {
+          model: sequelize.mechanic,
+          key: 'id'
+        }
       },
       toolId: {
         type: Sequelize.STRING,
