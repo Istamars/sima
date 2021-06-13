@@ -67,7 +67,29 @@ exports.getByDateRange = (req, res) => {
         m."unitPrice" * m.quantity AS total,
         mc.name AS "mechanicName",
         t.name AS "toolName",
-        p.name AS "projectName"
+        p.name AS "projectName",
+        (SELECT
+          MIN(mg."initialHm")
+        FROM
+          management mg, maintenances m
+        WHERE
+          m."projectId" = :projectId AND
+          m."toolId" = :toolId AND
+          m."startDate" = :startDate AND
+          m."projectId" = mg."projectId" AND
+          m."toolId" = mg."toolId" AND
+          m."startDate" = mg.date) as "initialHm",
+        (SELECT
+          MAX(mg."finalHm")
+        FROM
+          management mg, maintenances m
+        WHERE
+          m."projectId" = :projectId AND
+          m."toolId" = :toolId AND
+          m."endDate" = :endDate AND
+          m."projectId" = mg."projectId" AND
+          m."toolId" = mg."toolId" AND
+          m."endDate" = mg.date) as "finalHm"
       FROM
         maintenances m, tools t, projects p, mechanics mc
       WHERE
@@ -91,10 +113,13 @@ exports.getByDateRange = (req, res) => {
       {replacements: {projectId, toolId, startDate, endDate}}
     )
       .then(result=> {
+        console.log('res',result)
         const data = {
           projectName: result[0][0].projectName,
           toolName: result[0][0].toolName,
           mechanicName: result[0][0].mechanicName,
+          initialHm: result[0][0].initialHm,
+          finalHm: result[0][0].finalHm,
           maintenance: changeMaintenanceFormat(result[0])
         }
         return res.status(200).send(data);
@@ -120,7 +145,27 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
         m."unitPrice" * m.quantity AS total,
         mc.name AS "mechanicName",
         t.name AS "toolName",
-        p.name AS "projectName"
+        p.name AS "projectName",
+        (SELECT
+          MIN(mg."initialHm")
+        FROM
+          management mg, maintenances m
+        WHERE
+          m."projectId" = :projectId AND
+          m."toolId" = :toolId AND
+          m."projectId" = mg."projectId" AND
+          m."toolId" = mg."toolId" AND
+          m."startDate" = mg.date) as "initialHm",
+        (SELECT
+          MAX(mg."finalHm")
+        FROM
+          management mg, maintenances m
+        WHERE
+          m."projectId" = :projectId AND
+          m."toolId" = :toolId AND
+          m."projectId" = mg."projectId" AND
+          m."toolId" = mg."toolId" AND
+          m."endDate" = mg.date) as "finalHm"
       FROM
         maintenances m, tools t, projects p, mechanics mc
       WHERE
@@ -146,6 +191,8 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
           projectName: result[0][0].projectName,
           toolName: result[0][0].toolName,
           mechanicName: result[0][0].mechanicName,
+          initialHm: result[0][0].initialHm,
+          finalHm: result[0][0].finalHm,
           maintenance: changeMaintenanceFormat(result[0])
         }
         return res.status(200).send(data);
