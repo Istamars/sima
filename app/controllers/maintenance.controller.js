@@ -13,6 +13,7 @@ const changeMaintenanceFormat = (array) => {
         description,
         quantity,
         unitPrice,
+        mechanicName,
         total
       } = item;
       
@@ -143,6 +144,8 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
         m.quantity,
         m."unitPrice",
         m."unitPrice" * m.quantity AS total,
+        u.mobilization,
+        u.demobilization,
         mc.name AS "mechanicName",
         t.name AS "toolName",
         p.name AS "projectName",
@@ -167,12 +170,14 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
           m."toolId" = mg."toolId" AND
           m."endDate" = mg.date) as "finalHm"
       FROM
-        maintenances m, tools t, projects p, mechanics mc
+        maintenances m, tools t, projects p, mechanics mc, usages u
       WHERE
         m."toolId" = :toolId AND
         m."projectId" = :projectId AND
         p.id = m."projectId" AND
         t.id = m."toolId" AND
+        u."projectId" = m."projectId" AND
+        u."toolId" = m."toolId" AND
         mc.id = m."mechanicId"
       GROUP BY
         m."startDate",
@@ -183,16 +188,24 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
         m."unitPrice",
         t.name,
         p.name,
-        mc.name`,
+        mc.name,
+        u.mobilization,
+        u.demobilization`,
         {replacements: {projectId, toolId}}
     )
       .then(result=> {
+
+        console.log('res', result[0])
         const data = {
           projectName: result[0][0].projectName,
           toolName: result[0][0].toolName,
           mechanicName: result[0][0].mechanicName,
           initialHm: result[0][0].initialHm,
           finalHm: result[0][0].finalHm,
+          mobilization: result[0][0].mobilization,
+          demobilization: result[0][0].demobilization,
+          projectId,
+          toolId,
           maintenance: changeMaintenanceFormat(result[0])
         }
         return res.status(200).send(data);
