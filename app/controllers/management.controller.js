@@ -85,28 +85,22 @@ exports.findAll = (req, res) => {
   //   });
 
   sequelize.query(
-    `SELECT
-      m.*,
-      p."name" as "projectName",
-      t."name" as "toolName",
-      u."name" as "userName",
-      SUM(o."productionResult") as productionResult
-    FROM
-      management m, projects p, tools t, users u, operations o
-    WHERE
-      m."date" = :date AND
-      m."userId" = :userId AND
-      m."toolId" = :toolId AND
-      m."projectId" = :projectId AND
+    `select m.*,
+	p."name" as "projectName",
+	t."name" as "toolName",
+	u."name" as "userName",
+	(select SUM(o."productionResult") from operations o where 
+      o."userId" = :userId AND
+      o."toolId" = :toolId AND
+      o."projectId" = :projectId AND
+      o.date = :date) as "productionResult"
+from management m, projects p, tools t, users u 
+where m."date" = :date and m."userId" = :userId and m."toolId" = :toolId and m."projectId" = :projectId and 
       u.id = m."userId" AND
       t.id = m."toolId" AND
-      p.id = m."projectId" AND
-      o."userId" = m."userId" AND
-      o."toolId" = m."toolId" AND
-      o."projectId" = m."projectId" AND
-      o.date = m."date"
-    GROUP BY
-      m.date, m."isCleaned", m."cleanlinessNote", m."isReady", m."readyNote", m.location, m.job, m."returnTime", m.fee, m."initialHm", m."finalHm", m."userId", m."toolId", m."projectId", p.name, t.name, u.name`,
+      p.id = m."projectId"
+GROUP BY
+      m.date, m."isCleaned", m."cleanlinessNote", m."isReady", m."readyNote", m.location, m.job, m."returnTime", m.fee, m."initialHm", m."finalHm", m."userId", m."toolId", m."projectId", p.name, t.name, u.name;`,
     {replacements: {date, userId, toolId, projectId}}
   )
     .then(result => {
