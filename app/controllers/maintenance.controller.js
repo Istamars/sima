@@ -4,6 +4,30 @@ const sequelize = db.sequelize;
 const Op = db.Sequelize.Op;
 const Maintenance = db.maintenance;
 
+const changeMaintenanceFormat = (array) => {
+    return array.map((item) => {
+      const {
+        startDate,
+        endDate,
+        type,
+        description,
+        quantity,
+        unitPrice,
+        total
+      } = item;
+      
+      return {
+        startDate,
+        endDate,
+        type,
+        description,
+        quantity,
+        unitPrice,
+        total
+      }
+    })
+  }
+
 exports.create = (req, res) => {
   const maintenance = {
     startDate,
@@ -67,7 +91,12 @@ exports.getByDateRange = (req, res) => {
       {replacements: {projectId, toolId, startDate, endDate}}
     )
       .then(result=> {
-        const data = result[0];
+        const data = {
+          projectName: result[0][0].projectName,
+          toolName: result[0][0].toolName,
+          mechanicName: result[0][0].mechanicName,
+          maintenance: changeMaintenanceFormat(result[0])
+        }
         return res.status(200).send(data);
       })
       .catch(err => {
@@ -113,7 +142,12 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
         {replacements: {projectId, toolId}}
     )
       .then(result=> {
-        const data = result[0];
+        const data = {
+          projectName: result[0][0].projectName,
+          toolName: result[0][0].toolName,
+          mechanicName: result[0][0].mechanicName,
+          maintenance: changeMaintenanceFormat(result[0])
+        }
         return res.status(200).send(data);
       })
       .catch(err => {
