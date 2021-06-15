@@ -229,6 +229,9 @@ exports.findMonthlyReport = (req, res) => {
         //   console.log(result)
         //   return res.send(result)
         const data = result[0][0];
+
+        if(!data.length) return res.status(200).send(data);
+
         const {userId, toolId, projectId} = data;
 
         sequelize.query(
