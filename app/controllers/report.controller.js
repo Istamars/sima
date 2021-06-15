@@ -3,6 +3,43 @@ const db = require('../models');
 const Report = db.report;
 const sequelize = db.sequelize;
 
+const changeReportFormat = (array) => {
+    return array.map((item) => {
+      const {
+        createdAt,
+        type,
+        dateOrMonthOrYear,
+        status,
+        projectId,
+        toolId,
+        isOperatorApproved,
+        isOfficerApproved,
+        isSiteManagerApproved,
+        isProjectManagerApproved,
+        userId
+      } = item;
+      const toolName = item.tool.name;
+      const userName = item.user.name;
+      const projectName = item.project.name;
+      
+      return {
+        date,
+        startTime,
+        endTime,
+        category,
+        productionResult,
+        duration,
+        unit,
+        info,
+        userId,
+        toolId,
+        projectId,
+        toolName,
+        userName,
+        projectName
+      }
+    })
+  }
 exports.create = (req, res) => {
   const report = {
     type,
@@ -31,31 +68,68 @@ exports.create = (req, res) => {
 }
 
 exports.findDraft = (req, res) => {
-  Report.findAll({where: {status: 'draft'}})
-    .then(data => {
-        console.log(data)
-      return res.status(200).send(data);
-    })
-    .catch(err => {
-      res.status(500).send({
-        message:
-          err.message || 'Some error occurred while retrieving the operation'
+    sequelize.query(
+      `SELECT
+        r.*,
+        u.name AS "userName",
+        t.name AS "toolName",
+        p.name AS "projectName"
+      FROM
+        reports r, users u, tools t, projects p
+      WHERE
+        r.status = 'draft' AND
+        r."userId" = u.id AND
+        r."toolId" = t.id AND
+        r."projectId" = p.id`
+    )
+      .then(result=> {
+        const data = result[0];
+        return res.status(200).send(data);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message:
+          err.message || 'Some error occurred while creating the cost'
+        });
       });
-    });
 }
 
 exports.findApprove = (req, res) => {
-  Report.findAll({where: {status: 'approve'}})
-    .then(data => {
-        console.log(data)
-      return res.status(200).send(data);
-    })
-    .catch(err => {
-      res.status(500).send({
-        message:
-          err.message || 'Some error occurred while retrieving the operation'
+    sequelize.query(
+      `SELECT
+        r.*,
+        u.name AS "userName",
+        t.name AS "toolName",
+        p.name AS "projectName"
+      FROM
+        reports r, users u, tools t, projects p
+      WHERE
+        r.status = 'approved' AND
+        r."userId" = u.id AND
+        r."toolId" = t.id AND
+        r."projectId" = p.id`
+    )
+      .then(result=> {
+        const data = result[0];
+        return res.status(200).send(data);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message:
+          err.message || 'Some error occurred while creating the cost'
+        });
       });
-    });
+//   Report.findAll({where: {status: 'approve'}})
+//     .then(data => {
+//         console.log(data)
+//       return res.status(200).send(data);
+//     })
+//     .catch(err => {
+//       res.status(500).send({
+//         message:
+//           err.message || 'Some error occurred while retrieving the operation'
+//       });
+//     });
 }
 
 exports.findDailyReport = (req, res) => {
@@ -230,7 +304,99 @@ exports.findMonthlyReport = (req, res) => {
         //   return res.send(result)
         const data = result[0][0];
 
-        if(!data) return res.status(200).send(data);
+        if(!result[0].length) return res.status(200).send(result[0]);
+
+        const {userId, toolId, projectId} = data;
+
+        sequelize.query(
+            `SELECT
+              *
+            FROM
+              operations o
+            WHERE 
+              EXTRACT(MONTH FROM o.date) = :month AND
+              EXTRACT(YEAR FROM o.date) = :year AND
+              o."toolId" = :toolId AND
+              o."projectId" = :projectId
+            ORDER BY
+              o.date ASC`,
+            {replacements: {year, month, userId, toolId, projectId}}
+          )
+          .then(result=> {
+            const operations = result[0];
+            data.operations = operations;
+
+            return res.status(200).send(data);
+
+          })
+          .catch(err => {
+            res.status(500).send({
+              message:
+                err.message || 'Some error occurred while creating the cost'
+            });
+          });
+      })
+      .catch(err => {
+        res.status(500).send({
+          message:
+            err.message || 'Some error occurred while creating the cost'
+        });
+      });
+}
+
+exports.findAnnualReport = (req, res) => {
+    const {dateOrMonthOrYear, userId, createdAt, projectId, toolId} = req.params;
+    const type = 'monthly';
+    const year = dateOrMonthOrYear.split('-')[0];
+    const month = dateOrMonthOrYear.split('-')[1];
+
+    sequelize.query(
+      `SELECT 
+        r.*,
+        t.name AS "toolName",
+        p.name AS "projectName",
+        u.name AS "userName",
+        MIN(m."initialHm") AS "initialHm",
+        MAX(m."finalHm") AS "finalHm"
+      FROM
+        reports r, projects p, tools t, users u, management m
+      WHERE
+        r."dateOrMonthOrYear" = :dateOrMonthOrYear AND
+        r."userId" = :userId AND
+        r.type = :type AND
+        r."createdAt" = :createdAt AND
+        r."projectId" = :projectId AND
+        r."toolId" = :toolId AND
+        EXTRACT(MONTH FROM m.date) = :month AND
+        EXTRACT(YEAR FROM m.date) = :year AND
+        m."projectId" = :projectId AND
+        m."toolId" = :toolId AND
+        p.id = r."projectId" AND
+        t.id = r."toolId" AND
+        u.id = r."userId"
+      GROUP BY
+        r."createdAt",
+        r.type,
+        r."dateOrMonthOrYear",
+        r.status,
+        r."projectId",
+        r."toolId",
+        r."isOfficerApproved",
+        r."isOperatorApproved",
+        r."isProjectManagerApproved",
+        r."isSiteManagerApproved",
+        r."userId",
+        u.name,
+        t.name,
+        p.name`,
+      {replacements: {year, month, dateOrMonthOrYear, userId, type, createdAt, projectId, toolId}}
+    )
+      .then(result=> {
+        //   console.log(result)
+        //   return res.send(result)
+        const data = result[0][0];
+
+        if(!result[0].length) return res.status(200).send(result[0]);
 
         const {userId, toolId, projectId} = data;
 
