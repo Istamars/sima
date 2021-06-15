@@ -3,43 +3,6 @@ const db = require('../models');
 const Report = db.report;
 const sequelize = db.sequelize;
 
-const changeReportFormat = (array) => {
-    return array.map((item) => {
-      const {
-        createdAt,
-        type,
-        dateOrMonthOrYear,
-        status,
-        projectId,
-        toolId,
-        isOperatorApproved,
-        isOfficerApproved,
-        isSiteManagerApproved,
-        isProjectManagerApproved,
-        userId
-      } = item;
-      const toolName = item.tool.name;
-      const userName = item.user.name;
-      const projectName = item.project.name;
-      
-      return {
-        date,
-        startTime,
-        endTime,
-        category,
-        productionResult,
-        duration,
-        unit,
-        info,
-        userId,
-        toolId,
-        projectId,
-        toolName,
-        userName,
-        projectName
-      }
-    })
-  }
 exports.create = (req, res) => {
   const report = {
     type,
@@ -185,6 +148,9 @@ exports.findDailyReport = (req, res) => {
     )
       .then(result=> {
         const data = result[0][0];
+
+        if(!result[0].length) return res.status(200).send(result[0]);
+        
         const {dateOrMonthOrYear, userId, toolId, projectId} = data;
 
         sequelize.query(
@@ -434,4 +400,9 @@ exports.findAnnualReport = (req, res) => {
             err.message || 'Some error occurred while creating the cost'
         });
       });
+}
+
+exports.approveReport = (req, res) => {
+  const {userId, createdAt, dateOrMonthOrYear, toolId, projectId, approverId} = req.body;
+
 }
