@@ -230,7 +230,7 @@ exports.findMonthlyReport = (req, res) => {
         //   return res.send(result)
         const data = result[0][0];
 
-        if(!data.length) return res.status(200).send(data);
+        if(!data) return res.status(200).send(data);
 
         const {userId, toolId, projectId} = data;
 
