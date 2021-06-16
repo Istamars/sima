@@ -150,7 +150,7 @@ exports.findDailyReport = (req, res) => {
         const data = result[0][0];
 
         if(!result[0].length) return res.status(200).send(result[0]);
-        
+
         const {dateOrMonthOrYear, userId, toolId, projectId} = data;
 
         sequelize.query(
@@ -333,7 +333,6 @@ exports.findAnnualReport = (req, res) => {
         r."createdAt" = :createdAt AND
         r."projectId" = :projectId AND
         r."toolId" = :toolId AND
-        EXTRACT(MONTH FROM m.date) = :month AND
         EXTRACT(YEAR FROM m.date) = :year AND
         m."projectId" = :projectId AND
         m."toolId" = :toolId AND
@@ -403,6 +402,172 @@ exports.findAnnualReport = (req, res) => {
 }
 
 exports.approveReport = (req, res) => {
-  const {userId, createdAt, dateOrMonthOrYear, toolId, projectId, approverId} = req.body;
+  const {
+    userId, createdAt, dateOrMonthOrYear, toolId, projectId, approverId
+  } = req.body;
 
+  sequelize.query(
+    `SELECT
+      r.type,
+      r."isOperatorApproved",
+      r."isOfficerApproved",
+      r."isSiteManagerApproved",
+      r."isProjectManagerApproved"
+    FROM
+      reports r
+    WHERE
+      r."userId" = :userId AND
+      r."createdAt" = :createdAt AND
+      r."dateOrMonthOrYear" = :dateOrMonthOrYear AND
+      r."toolId" = :toolId AND
+      r."projectId" = :projectId`,
+    {replacements: {userId, createdAt, dateOrMonthOrYear, toolId, projectId}}
+  )
+    .then(result=> {
+      const reports = result[0][0];
+
+      console.log('approverId', approverId)
+
+      if(!result[0].length) return res.status(200).send(result[0]);
+
+      sequelize.query(
+        `SELECT
+          u.position
+        FROM
+          users u
+        WHERE
+          u.id = :approverId`,
+        {replacements: {approverId}}
+      )
+        .then(result=> {
+          const users = result[0][0];
+
+          switch(users.position) {
+            case '1' :
+              if(!reports.type === 'daily') return res.status(500).send({
+                message: 'Operator cannot approved except daily report'
+              });
+              query = 
+                `UPDATE
+                reports
+                SET
+                "isOperatorApproved" = :approverId
+                WHERE
+                "userId" = :userId AND
+                "createdAt" = :createdAt AND
+                "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                "toolId" = :toolId AND
+                "projectId" = :projectId
+                RETURNING *`;
+              break;
+            case '2' :
+              query = 
+                `UPDATE
+                  reports
+                SET
+                  "isOfficerApproved" = :approverId
+                WHERE
+                  "userId" = :userId AND
+                  "createdAt" = :createdAt AND
+                  "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                  "toolId" = :toolId AND
+                  "projectId" = :projectId
+                RETURNING *`;
+              break;
+            case '3' :
+              query = 
+                `UPDATE
+                  reports
+                SET
+                  "isSiteManager" = :approverId
+                WHERE
+                  "userId" = :userId AND
+                  "createdAt" = :createdAt AND
+                  "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                  "toolId" = :toolId AND
+                  "projectId" = :projectId
+                RETURNING *`;
+
+              if(reports.type === 'daily') {
+                query =
+                  `UPDATE
+                    reports
+                  SET
+                    "isSiteManagerApproved" = :approverId,
+                    "status" = 'approved'
+                  WHERE
+                    "userId" = :userId AND
+                    "createdAt" = :createdAt AND
+                    "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                    "toolId" = :toolId AND
+                    "projectId" = :projectId
+                  RETURNING *`;
+              }
+              break;
+            case '4' :
+              if(!reports.type === 'daily') return res.status(500).send({
+                message: 'Operator cannot approved except monthly and annual report'
+              });
+              query = 
+                `UPDATE
+                  reports
+                SET
+                  "isProjectManagerApproved" = :approverId
+                WHERE
+                  "userId" = :userId AND
+                  "createdAt" = :createdAt AND
+                  "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                  "toolId" = :toolId AND
+                  "projectId" = :projectId
+                RETURNING *`;
+  
+                if(reports.type === 'monthly' || reports.type === 'annual') {
+                  query =
+                    `UPDATE
+                      reports
+                    SET
+                      "isProjectManagerApproved" = :approverId,
+                      "status" = 'approved'
+                    WHERE
+                      "userId" = :userId AND
+                      "createdAt" = :createdAt AND
+                      "dateOrMonthOrYear" = :dateOrMonthOrYear AND
+                      "toolId" = :toolId AND
+                      "projectId" = :projectId
+                    RETURNING *`;
+                }
+              break;
+          }
+
+          sequelize.query(
+            query,
+            {replacements: {
+              userId, createdAt, dateOrMonthOrYear, toolId, projectId, approverId
+            }}
+          )
+            .then(result=> {
+              const reports = result[0][0];
+
+              return res.status(200).send(reports);
+            })
+            .catch(err => {
+              res.status(500).send({
+                message:
+                  err.message || 'Some error occurred while creating the cost'
+              });
+            });
+        })
+        .catch(err => {
+          res.status(500).send({
+            message:
+              err.message || 'Some error occurred while creating the cost'
+          });
+        });
+    })
+    .catch(err => {
+      res.status(500).send({
+        message:
+          err.message || 'Some error occurred while creating the cost'
+      });
+    });
 }

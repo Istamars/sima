@@ -2,6 +2,7 @@ const router = require('express').Router();
 const report = require('../../controllers/report.controller');
 
 router.post('/', report.create);
+router.put('/', report.approveReport);
 router.get('/draft', report.findDraft);
 router.get('/approve', report.findApprove);
 router.get(
