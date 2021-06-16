@@ -312,9 +312,8 @@ exports.findMonthlyReport = (req, res) => {
 
 exports.findAnnualReport = (req, res) => {
     const {dateOrMonthOrYear, userId, createdAt, projectId, toolId} = req.params;
-    const type = 'monthly';
-    const year = dateOrMonthOrYear.split('-')[0];
-    const month = dateOrMonthOrYear.split('-')[1];
+    const type = 'annual';
+    const year = dateOrMonthOrYear
 
     sequelize.query(
       `SELECT 
@@ -354,7 +353,7 @@ exports.findAnnualReport = (req, res) => {
         u.name,
         t.name,
         p.name`,
-      {replacements: {year, month, dateOrMonthOrYear, userId, type, createdAt, projectId, toolId}}
+      {replacements: {year, dateOrMonthOrYear, userId, type, createdAt, projectId, toolId}}
     )
       .then(result=> {
         //   console.log(result)
@@ -371,13 +370,12 @@ exports.findAnnualReport = (req, res) => {
             FROM
               operations o
             WHERE 
-              EXTRACT(MONTH FROM o.date) = :month AND
               EXTRACT(YEAR FROM o.date) = :year AND
               o."toolId" = :toolId AND
               o."projectId" = :projectId
             ORDER BY
               o.date ASC`,
-            {replacements: {year, month, userId, toolId, projectId}}
+            {replacements: {year, userId, toolId, projectId}}
           )
           .then(result=> {
             const operations = result[0];

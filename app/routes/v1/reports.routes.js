@@ -13,5 +13,9 @@ router.get(
   '/monthly/:dateOrMonthOrYear/users/:userId/createdAt/:createdAt/projects/:projectId/tools/:toolId',
   report.findMonthlyReport
 );
+router.get(
+  '/annual/:dateOrMonthOrYear/users/:userId/createdAt/:createdAt/projects/:projectId/tools/:toolId',
+  report.findAnnualReport
+);
 
 module.exports = router;
