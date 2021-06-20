@@ -11,7 +11,14 @@ const countDuration = (startTime, endTime) => {
   const hour = Math.floor(duration/60);
   const minutes = duration % 60;
 
-  return hour ? `${hour} hour ${minutes} minutes` : `${minutes} minutes`;
+  return {hour, minutes, duration};
+}
+
+const convertDurationToString = (duration) => {
+  const hour = Math.floor(duration/60);
+  const minutes = duration % 60;
+
+  return `${hour} hour ${minutes} minutes`;
 }
 
 const countTotalFee = (item) => {
@@ -36,23 +43,35 @@ const convertDailyToMonthly = (operations, costs) => {
       totalFee += countTotalFee(it)
       switch (it.category) {
         case 'persiapan' :
-          prepareTime = duration;
+          duration.hour ?
+            prepareTime = `${duration.hour} hour ${duration.minutes} minutes`
+          :
+            prepareTime = `${duration.minutes} minutes`;
           date = it.date;
           break;
         case 'operasi' :
-          operationTime = duration
+          duration.hour ?
+            operationTime = `${duration.hour} hour ${duration.minutes} minutes`
+          :
+            operationTime = `${duration.minutes} minutes`;
           date = it.date;
           break;
         case 'perbaikan' :
         case 'tunggu perbaikan' :
         case 'service' :
-          repairTime = duration
+          duration.hour ?
+            repairTime = `${duration.hour} hour ${duration.minutes} minutes`
+          :
+            repairTime = `${duration.minutes} minutes`;
           date = it.date;
           break;
         case 'idle' :
         case 'cuaca buruk' :
         case 'lain-lain' :
-          idleTime = duration
+          duration.hour ?
+            idleTime = `${duration.hour} hour ${duration.minutes} minutes`
+          :
+            idleTime = `${duration.minutes} minutes`;
           date = it.date;
         break;
         
@@ -66,6 +85,73 @@ const convertDailyToMonthly = (operations, costs) => {
         ];
 
     // return value;
+  })
+
+  return value;
+}
+
+const convertDailyToAnnual = (operations, costs) => {
+  let value = [];
+  const months = [
+    '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+    'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ]
+
+  months.map((month, index) => {
+    let
+      dataMonthExist = false,
+      prepareTime = '',
+      prepare = 0,
+      operationTime = '',
+      operation = 0 ,
+      repairTime = '',
+      repair = 0,
+      idleTime = '',
+      idle = 0,
+      totalFee = 0,
+      totalCosts = 0;
+    costs.filter(item => parseInt(item.date.split('-')[1]) === index).map((it) => {
+      unitCost = it.unitCost || 0
+      quantity = it.quantity || 0
+      totalCosts += unitCost * quantity;
+    })
+
+    operations.filter(item => parseInt(item.date.split('-')[1]) === index).map((it) => {
+      dataMonthExist = true;
+      const {duration} = countDuration(it.startTime, it.endTime)
+      totalFee += countTotalFee(it)
+      switch (it.category) {
+        case 'persiapan' :
+          prepare += duration;
+          break;
+        case 'operasi' :
+          operation += duration
+          break;
+        case 'perbaikan' :
+        case 'tunggu perbaikan' :
+        case 'service' :
+          repair += duration
+          break;
+        case 'idle' :
+        case 'cuaca buruk' :
+        case 'lain-lain' :
+          idle += duration
+        break;
+      }
+    })
+
+    prepareTime = convertDurationToString(prepare)
+    operationTime = convertDurationToString(operation)
+    repairTime = convertDurationToString(repair)
+    idleTime = convertDurationToString(idle)
+
+    if(dataMonthExist){
+      value = [
+          ...value,
+          {month, prepareTime, operationTime, repairTime, idleTime,  totalFee, totalCosts}
+        ];
+      dataMonthExist = false;
+    }
   })
 
   return value;
@@ -344,7 +430,7 @@ exports.findMonthlyReport = (req, res) => {
             `SELECT
               o.*, m."feeHour", m."feeKg"
             FROM
-              management m,operations o
+              management m, operations o
             WHERE 
               EXTRACT(MONTH FROM o.date) = :month AND
               EXTRACT(YEAR FROM o.date) = :year AND
@@ -418,9 +504,11 @@ exports.findAnnualReport = (req, res) => {
         p.name AS "projectName",
         u.name AS "userName",
         MIN(m."initialHm") AS "initialHm",
-        MAX(m."finalHm") AS "finalHm"
+        MAX(m."finalHm") AS "finalHm",
+        ug.mobilization,
+        ug.demobilization
       FROM
-        reports r, projects p, tools t, users u, management m
+        reports r, projects p, tools t, users u, management m, usages ug
       WHERE
         r."dateOrMonthOrYear" = :dateOrMonthOrYear AND
         r."userId" = :userId AND
@@ -428,6 +516,8 @@ exports.findAnnualReport = (req, res) => {
         r."createdAt" = :createdAt AND
         r."projectId" = :projectId AND
         r."toolId" = :toolId AND
+        ug."projectId" = :projectId AND
+        ug."toolId" = :toolId AND
         EXTRACT(YEAR FROM m.date) = :year AND
         m."projectId" = :projectId AND
         m."toolId" = :toolId AND
@@ -448,12 +538,12 @@ exports.findAnnualReport = (req, res) => {
         r."userId",
         u.name,
         t.name,
-        p.name`,
+        p.name,
+        ug.mobilization,
+        ug.demobilization`,
       {replacements: {year, dateOrMonthOrYear, userId, type, createdAt, projectId, toolId}}
     )
       .then(result=> {
-        //   console.log(result)
-        //   return res.send(result)
         const data = result[0][0];
 
         if(!result[0].length) return res.status(200).send(result[0]);
@@ -461,29 +551,58 @@ exports.findAnnualReport = (req, res) => {
         const {userId, toolId, projectId} = data;
 
         sequelize.query(
-            `SELECT
-              *
-            FROM
-              operations o
-            WHERE 
-              EXTRACT(YEAR FROM o.date) = :year AND
-              o."toolId" = :toolId AND
-              o."projectId" = :projectId
-            ORDER BY
-              o.date ASC`,
-            {replacements: {year, userId, toolId, projectId}}
-          )
-          .then(result=> {
-            const operations = result[0];
-            data.operations = operations;
+          `SELECT
+            o.*, m."feeHour", m."feeKg"
+          FROM
+            management m, operations o
+          WHERE 
+            EXTRACT(YEAR FROM o.date) = :year AND
+            o."toolId" = :toolId AND
+            o."projectId" = :projectId AND
+            m.date = o.date AND
+            m."toolId" = o."toolId" AND
+            m."projectId" = o."projectId"
+          ORDER BY
+            o.date ASC`,
+          {replacements: {year, userId, toolId, projectId}}
+        )
+          .then(result => {
+          const dailyOperations = result[0];
 
-            return res.status(200).send(data);
+          sequelize.query(
+            `SELECT
+              c.*
+            FROM
+              costs c
+            WHERE 
+              EXTRACT(YEAR FROM c.date) = :year AND
+              c."toolId" = :toolId AND
+              c."projectId" = :projectId
+            ORDER BY
+              c.date ASC`,
+            {replacements: {year, userId, toolId, projectId}}
+            )
+              .then(result => {
+                const costs = result[0];
+                const operations = convertDailyToAnnual(dailyOperations, costs);
+
+                data.operations = operations;
+
+                return res.status(200).send(data);
+
+              })
+              .catch(err => {
+                res.status(500).send({
+                  message:
+                  err.message || 'Some error occurred while creating the cost'
+              });
+              });
 
           })
           .catch(err => {
             res.status(500).send({
               message:
-                err.message || 'Some error occurred while creating the cost'
+              err.message || 'Some error occurred while creating the cost'
             });
           });
       })
