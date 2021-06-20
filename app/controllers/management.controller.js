@@ -172,23 +172,20 @@ exports.update = (req, res) => {
 };
 
 exports.addFee = (req, res) => {
-  const management = {
-    isCleaned,
-    cleanlinessNote,
-    isReady,
-    readyNote,
-    returnTime,
-    finalHm,
-  } = req.body;
+  const management = { feeHour, feeKg } = req.body;
   const {date, userId, toolId, projectId} = req.body;
 
   Management.update(management, {
     where :{
       [Op.and]: [ {date}, {userId}, {toolId}, {projectId} ]
-    }
+    },
+    returning: true,
   })
-    .then(data => {
-      return res.status(200).send(data);
+    .then(result => {
+      if (result[0] !== 1)
+        return res.status(500).send({message: 'Operation changes failed'});
+      const data = result[1][0].dataValues;
+      return res.send(data);
     })
     .catch(err => {
       res.status(500).send({

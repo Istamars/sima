@@ -24,6 +24,7 @@ const changeMaintenanceFormat = (array) => {
         description,
         quantity,
         unitPrice,
+        mechanicName,
         total
       }
     })
