@@ -21,17 +21,28 @@ const convertDurationToString = (duration) => {
   return `${hour} hour ${minutes} minutes`;
 }
 
-const countTotalFee = (item) => {
-  const feeHour = item.feeHour || 0;
-  const feeKg = item.feeKg || 0;
-  
-  return item.unit === 'jam' ? feeHour * item.productionResult : feeKg * item.productionResult;
+const countTotalProductionResult = (item) => {
+  return item.unit === 'jam' ? {
+    productionResultHour: item.productionResult,
+    productionResultKg: 0
+  } : {
+    productionResultHour: 0,
+    productionResultKg: item.productionResult
+  };
 }
 
 const convertDailyToMonthly = (operations, costs) => {
   let value = [];
   Array.apply(null, new Array(32)).map((_, index) => {
-    let date = '', prepareTime = '', operationTime = '', repairTime = '', idleTime = '', totalFee = 0, totalCosts = 0;
+    let
+      date = '',
+      prepareTime = '',
+      operationTime = '',
+      repairTime = '',
+      idleTime = '',
+      productionResultHour = 0,
+      productionResultKg = 0,
+      totalCosts = 0;
     costs.filter(item => parseInt(item.date.split('-')[2]) === index).map((it) => {
       unitCost = it.unitCost || 0
       quantity = it.quantity || 0
@@ -40,7 +51,9 @@ const convertDailyToMonthly = (operations, costs) => {
 
     operations.filter(item => parseInt(item.date.split('-')[2]) === index).map((it) => {
       const duration = countDuration(it.startTime, it.endTime)
-      totalFee += countTotalFee(it)
+    //   totalProductionResult += countTotalProductionResult(it)
+      productionResultHour += countTotalProductionResult(it).productionResultHour
+      productionResultKg += countTotalProductionResult(it).productionResultKg
       switch (it.category) {
         case 'persiapan' :
           duration.hour ?
@@ -81,10 +94,8 @@ const convertDailyToMonthly = (operations, costs) => {
     if(date)
       value = [
           ...value,
-          {date, prepareTime, operationTime, repairTime, idleTime,  totalFee, totalCosts}
+          {date, prepareTime, operationTime, repairTime, idleTime, totalCosts, productionResultHour, productionResultKg}
         ];
-
-    // return value;
   })
 
   return value;
@@ -108,7 +119,8 @@ const convertDailyToAnnual = (operations, costs) => {
       repair = 0,
       idleTime = '',
       idle = 0,
-      totalFee = 0,
+      productionResultHour = 0,
+      productionResultKg = 0,
       totalCosts = 0;
     costs.filter(item => parseInt(item.date.split('-')[1]) === index).map((it) => {
       unitCost = it.unitCost || 0
@@ -119,7 +131,8 @@ const convertDailyToAnnual = (operations, costs) => {
     operations.filter(item => parseInt(item.date.split('-')[1]) === index).map((it) => {
       dataMonthExist = true;
       const {duration} = countDuration(it.startTime, it.endTime)
-      totalFee += countTotalFee(it)
+      productionResultHour += countTotalProductionResult(it).productionResultHour
+      productionResultKg += countTotalProductionResult(it).productionResultKg
       switch (it.category) {
         case 'persiapan' :
           prepare += duration;
@@ -148,7 +161,7 @@ const convertDailyToAnnual = (operations, costs) => {
     if(dataMonthExist){
       value = [
           ...value,
-          {month, prepareTime, operationTime, repairTime, idleTime,  totalFee, totalCosts}
+          {month, prepareTime, operationTime, repairTime, idleTime, totalCosts, productionResultHour, productionResultKg}
         ];
       dataMonthExist = false;
     }
