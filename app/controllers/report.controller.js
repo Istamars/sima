@@ -157,6 +157,15 @@ const convertDailyToAnnual = (operations, costs) => {
   return value;
 }
 
+const changeOperationFormat = (array) => {
+  return array.map((item) => {
+    const {hour, minutes} = countDuration(item.startTime, item.endTime);
+    const duration = hour ? `${hour} jam ${minutes} menit` : `${minutes} menit`
+
+    return {...item, duration}
+  })
+}
+
 exports.create = (req, res) => {
   const report = {
     type,
@@ -236,17 +245,6 @@ exports.findApprove = (req, res) => {
           err.message || 'Some error occurred while creating the cost'
         });
       });
-//   Report.findAll({where: {status: 'approve'}})
-//     .then(data => {
-//         console.log(data)
-//       return res.status(200).send(data);
-//     })
-//     .catch(err => {
-//       res.status(500).send({
-//         message:
-//           err.message || 'Some error occurred while retrieving the operation'
-//       });
-//     });
 }
 
 exports.findDailyReport = (req, res) => {
@@ -313,7 +311,7 @@ exports.findDailyReport = (req, res) => {
           )
           .then(result=> {
             const operations = result[0];
-            data.operations = operations;
+            data.operations = changeOperationFormat(operations);
 
             sequelize.query(
                 `SELECT
