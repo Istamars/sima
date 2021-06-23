@@ -24,7 +24,10 @@ module.exports = (sequelize, Sequelize) => {
     returnTime: {
       type: Sequelize.STRING
     },
-    fee: {
+    feeHour: {
+      type: Sequelize.INTEGER
+    },
+    feeKg: {
       type: Sequelize.INTEGER
     },
     initialHm: {

@@ -3,9 +3,6 @@ const Op = db.Sequelize.Op;
 const sequelize = db.sequelize;
 
 const Management = db.management;
-const Project = db.project;
-const Tool = db.tool;
-const User = db.user;
 
 const isEmpty = (obj) => {
   if(!obj) return true;
@@ -64,28 +61,9 @@ exports.create = (req, res) => {
 exports.findAll = (req, res) => {
   const {date, userId, toolId, projectId} = req.params;
 
-  // Management.findAll({
-  //   where :{
-  //     [Op.and]: [ {date}, {userId}, {toolId}, {projectId} ]
-  //   },
-  //   include: [
-  //     { model: Tool, attributes: ['name'] },
-  //     { model: User, attributes: ['name'] },
-  //     { model: Project, attributes: ['name'] }
-  //   ]
-  // })
-  //   .then(data => {
-  //     return res.status(200).send(data);
-  //   })
-  //   .catch(err => {
-  //     res.status(500).send({
-  //       message:
-  //         err.message || 'Some error occurred while retrieving the operation'
-  //     });
-  //   });
-
   sequelize.query(
-    `SELECT m.*,
+    `SELECT
+      m.*,
       p."name" as "projectName",
       t."name" as "toolName",
       u."name" as "userName",
@@ -117,7 +95,8 @@ exports.findAll = (req, res) => {
         m.location,
         m.job,
         m."returnTime",
-        m.fee,
+        m."feeHour",
+        m."feeKg",
         m."initialHm",
         m."finalHm",
         m."userId",

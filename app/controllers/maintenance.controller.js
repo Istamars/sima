@@ -115,7 +115,6 @@ exports.getByDateRange = (req, res) => {
       {replacements: {projectId, toolId, startDate, endDate}}
     )
       .then(result=> {
-        console.log('res',result)
         const data = {
           projectName: result[0][0].projectName,
           toolName: result[0][0].toolName,
@@ -195,8 +194,6 @@ exports.getMaintenanceByProjectAndTool = (req, res) => {
         {replacements: {projectId, toolId}}
     )
       .then(result=> {
-
-        console.log('res', result[0])
         const data = {
           projectName: result[0][0].projectName,
           toolName: result[0][0].toolName,

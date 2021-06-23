@@ -650,8 +650,6 @@ exports.approveReport = (req, res) => {
     .then(result=> {
       const reports = result[0][0];
 
-      console.log('approverId', approverId)
-
       if(!result[0].length) return res.status(200).send(result[0]);
 
       sequelize.query(
